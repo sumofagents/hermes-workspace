@@ -92,8 +92,20 @@ export function PlaygroundScreen() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
-    setAdminMode(params.get('admin') === '1')
+    const fromUrl = params.get('admin') === '1'
+    const fromStorage = window.localStorage.getItem('hermes-playground-admin') === '1'
+    setAdminMode(fromUrl || fromStorage)
   }, [])
+  const toggleAdminMode = () => {
+    setAdminMode((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        if (next) window.localStorage.setItem('hermes-playground-admin', '1')
+        else window.localStorage.removeItem('hermes-playground-admin')
+      }
+      return next
+    })
+  }
   const heardToastIds = useRef<Set<string>>(new Set())
   const completedTutorialRef = useRef(false)
   const lowHpArmedRef = useRef(true)
@@ -649,6 +661,23 @@ export function PlaygroundScreen() {
           <span aria-hidden="true" style={{ filter: focusMode ? 'none' : 'grayscale(0.4)' }}>
             {focusMode ? '👁️' : '👁'}
           </span>
+        </button>
+        {/* Admin mode toggle — shield icon, persistent via localStorage */}
+        <button
+          type="button"
+          onClick={toggleAdminMode}
+          aria-label={adminMode ? 'Hide admin panel' : 'Show admin panel'}
+          title={adminMode ? 'Hide admin panel' : 'Show admin panel'}
+          className="pointer-events-auto fixed right-3 top-[272px] z-[71] hidden h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/70 text-[15px] text-white shadow-xl backdrop-blur-xl md:flex"
+          style={{
+            boxShadow: adminMode ? '0 0 14px rgba(251,191,36,0.55)' : '0 8px 22px rgba(0,0,0,.55)',
+            borderColor: adminMode ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.15)',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            {adminMode ? <path d="m9 12 2 2 4-4" /> : null}
+          </svg>
         </button>
         <button
           type="button"
