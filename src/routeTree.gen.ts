@@ -106,6 +106,9 @@ import { Route as ApiAuthCheckRouteImport } from './routes/api/auth-check'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiArtifactsRouteImport } from './routes/api/artifacts'
 import { Route as ApiAgentRegistryRouteImport } from './routes/api/agent-registry'
+import { Route as ApiVectorMemoryStatusRouteImport } from './routes/api/vector-memory/status'
+import { Route as ApiVectorMemorySearchRouteImport } from './routes/api/vector-memory/search'
+import { Route as ApiVectorMemoryDiscoveryRouteImport } from './routes/api/vector-memory/discovery'
 import { Route as ApiUpdateWorkspaceRouteImport } from './routes/api/update/workspace'
 import { Route as ApiUpdateStatusRouteImport } from './routes/api/update/status'
 import { Route as ApiUpdateAgentRouteImport } from './routes/api/update/agent'
@@ -640,6 +643,22 @@ const ApiAgentRegistryRoute = ApiAgentRegistryRouteImport.update({
   path: '/api/agent-registry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVectorMemoryStatusRoute = ApiVectorMemoryStatusRouteImport.update({
+  id: '/api/vector-memory/status',
+  path: '/api/vector-memory/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVectorMemorySearchRoute = ApiVectorMemorySearchRouteImport.update({
+  id: '/api/vector-memory/search',
+  path: '/api/vector-memory/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVectorMemoryDiscoveryRoute =
+  ApiVectorMemoryDiscoveryRouteImport.update({
+    id: '/api/vector-memory/discovery',
+    path: '/api/vector-memory/discovery',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiUpdateWorkspaceRoute = ApiUpdateWorkspaceRouteImport.update({
   id: '/api/update/workspace',
   path: '/api/update/workspace',
@@ -1020,6 +1039,9 @@ export interface FileRoutesByFullPath {
   '/api/update/agent': typeof ApiUpdateAgentRoute
   '/api/update/status': typeof ApiUpdateStatusRoute
   '/api/update/workspace': typeof ApiUpdateWorkspaceRoute
+  '/api/vector-memory/discovery': typeof ApiVectorMemoryDiscoveryRoute
+  '/api/vector-memory/search': typeof ApiVectorMemorySearchRoute
+  '/api/vector-memory/status': typeof ApiVectorMemoryStatusRoute
   '/api/hermesworld/reservations/confirm': typeof ApiHermesworldReservationsConfirmRoute
   '/api/mcp/$name/logs': typeof ApiMcpNameLogsRoute
   '/api/mcp/hub-sources/$id': typeof ApiMcpHubSourcesIdRoute
@@ -1165,6 +1187,9 @@ export interface FileRoutesByTo {
   '/api/update/agent': typeof ApiUpdateAgentRoute
   '/api/update/status': typeof ApiUpdateStatusRoute
   '/api/update/workspace': typeof ApiUpdateWorkspaceRoute
+  '/api/vector-memory/discovery': typeof ApiVectorMemoryDiscoveryRoute
+  '/api/vector-memory/search': typeof ApiVectorMemorySearchRoute
+  '/api/vector-memory/status': typeof ApiVectorMemoryStatusRoute
   '/api/hermesworld/reservations/confirm': typeof ApiHermesworldReservationsConfirmRoute
   '/api/mcp/$name/logs': typeof ApiMcpNameLogsRoute
   '/api/mcp/hub-sources/$id': typeof ApiMcpHubSourcesIdRoute
@@ -1312,6 +1337,9 @@ export interface FileRoutesById {
   '/api/update/agent': typeof ApiUpdateAgentRoute
   '/api/update/status': typeof ApiUpdateStatusRoute
   '/api/update/workspace': typeof ApiUpdateWorkspaceRoute
+  '/api/vector-memory/discovery': typeof ApiVectorMemoryDiscoveryRoute
+  '/api/vector-memory/search': typeof ApiVectorMemorySearchRoute
+  '/api/vector-memory/status': typeof ApiVectorMemoryStatusRoute
   '/api/hermesworld/reservations/confirm': typeof ApiHermesworldReservationsConfirmRoute
   '/api/mcp/$name/logs': typeof ApiMcpNameLogsRoute
   '/api/mcp/hub-sources/$id': typeof ApiMcpHubSourcesIdRoute
@@ -1460,6 +1488,9 @@ export interface FileRouteTypes {
     | '/api/update/agent'
     | '/api/update/status'
     | '/api/update/workspace'
+    | '/api/vector-memory/discovery'
+    | '/api/vector-memory/search'
+    | '/api/vector-memory/status'
     | '/api/hermesworld/reservations/confirm'
     | '/api/mcp/$name/logs'
     | '/api/mcp/hub-sources/$id'
@@ -1605,6 +1636,9 @@ export interface FileRouteTypes {
     | '/api/update/agent'
     | '/api/update/status'
     | '/api/update/workspace'
+    | '/api/vector-memory/discovery'
+    | '/api/vector-memory/search'
+    | '/api/vector-memory/status'
     | '/api/hermesworld/reservations/confirm'
     | '/api/mcp/$name/logs'
     | '/api/mcp/hub-sources/$id'
@@ -1751,6 +1785,9 @@ export interface FileRouteTypes {
     | '/api/update/agent'
     | '/api/update/status'
     | '/api/update/workspace'
+    | '/api/vector-memory/discovery'
+    | '/api/vector-memory/search'
+    | '/api/vector-memory/status'
     | '/api/hermesworld/reservations/confirm'
     | '/api/mcp/$name/logs'
     | '/api/mcp/hub-sources/$id'
@@ -1875,6 +1912,9 @@ export interface RootRouteChildren {
   ApiUpdateAgentRoute: typeof ApiUpdateAgentRoute
   ApiUpdateStatusRoute: typeof ApiUpdateStatusRoute
   ApiUpdateWorkspaceRoute: typeof ApiUpdateWorkspaceRoute
+  ApiVectorMemoryDiscoveryRoute: typeof ApiVectorMemoryDiscoveryRoute
+  ApiVectorMemorySearchRoute: typeof ApiVectorMemorySearchRoute
+  ApiVectorMemoryStatusRoute: typeof ApiVectorMemoryStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -2558,6 +2598,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentRegistryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/vector-memory/status': {
+      id: '/api/vector-memory/status'
+      path: '/api/vector-memory/status'
+      fullPath: '/api/vector-memory/status'
+      preLoaderRoute: typeof ApiVectorMemoryStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/vector-memory/search': {
+      id: '/api/vector-memory/search'
+      path: '/api/vector-memory/search'
+      fullPath: '/api/vector-memory/search'
+      preLoaderRoute: typeof ApiVectorMemorySearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/vector-memory/discovery': {
+      id: '/api/vector-memory/discovery'
+      path: '/api/vector-memory/discovery'
+      fullPath: '/api/vector-memory/discovery'
+      preLoaderRoute: typeof ApiVectorMemoryDiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/update/workspace': {
       id: '/api/update/workspace'
       path: '/api/update/workspace'
@@ -3193,6 +3254,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUpdateAgentRoute: ApiUpdateAgentRoute,
   ApiUpdateStatusRoute: ApiUpdateStatusRoute,
   ApiUpdateWorkspaceRoute: ApiUpdateWorkspaceRoute,
+  ApiVectorMemoryDiscoveryRoute: ApiVectorMemoryDiscoveryRoute,
+  ApiVectorMemorySearchRoute: ApiVectorMemorySearchRoute,
+  ApiVectorMemoryStatusRoute: ApiVectorMemoryStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
