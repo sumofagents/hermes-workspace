@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   SWARM2_CARD_DENSITY_CONTRACT,
@@ -5,6 +6,9 @@ import {
   SWARM2_OPERATIONS_REUSE,
   SWARM2_REAL_API_ENDPOINTS,
   SWARM2_SURFACE_CONTRACT,
+  agentRegistryResponseEntries,
+  mergeRegistryRosterWithCrew,
+  registryEntriesToRosterWorkers,
 } from './swarm2-screen'
 
 describe('Swarm2 surface contract', () => {
@@ -49,7 +53,7 @@ describe('Swarm2 surface contract', () => {
       '/api/swarm-environment',
       '/api/swarm-runtime',
       '/api/swarm-missions',
-      '/api/swarm-roster',
+      '/api/agent-registry',
       '/api/integrations',
       '/api/swarm-health',
       '/api/swarm-decompose',
@@ -62,6 +66,117 @@ describe('Swarm2 surface contract', () => {
       '/api/terminal-resize',
       '/api/terminal-close',
     ])
+  })
+
+  it('maps read-only registry entries into roster worker metadata without dispatch state', () => {
+    expect(registryEntriesToRosterWorkers([
+      {
+        id: 'swarm5',
+        displayName: 'Builder',
+        role: 'Primary Builder',
+        specialty: 'implementation',
+        model: 'GPT-5.5',
+        mission: 'Ship focused slices.',
+        skills: ['swarm-ui-worker'],
+        capabilities: ['code-editing'],
+        dispatchEnabled: false,
+        source: 'swarm.yaml',
+        sourceDerived: true,
+        writable: false,
+        disabledActions: ['Registry is read-only in Phase 1.'],
+      },
+    ])).toEqual([
+      expect.objectContaining({
+        id: 'swarm5',
+        name: 'Builder',
+        role: 'Primary Builder',
+        specialty: 'implementation',
+        model: 'GPT-5.5',
+        mission: 'Ship focused slices.',
+        skills: ['swarm-ui-worker'],
+        capabilities: ['code-editing'],
+      }),
+    ])
+  })
+
+  it('does not add registry-only entries to the operational worker control surface', () => {
+    const crew = [{
+      id: 'swarm1',
+      displayName: 'Live Worker',
+      role: 'Runtime',
+      profileFound: true,
+      gatewayState: 'online',
+      processAlive: true,
+      platforms: {},
+      model: 'runtime-model',
+      provider: 'runtime-provider',
+      lastSessionTitle: null,
+      lastSessionAt: null,
+      sessionCount: 0,
+      messageCount: 0,
+      toolCallCount: 0,
+      totalTokens: 0,
+      estimatedCostUsd: null,
+      cronJobCount: 0,
+      assignedTaskCount: 0,
+    }]
+    const roster = registryEntriesToRosterWorkers([
+      {
+        id: 'swarm1',
+        displayName: 'Registry Live Worker',
+        role: 'Registry Role',
+        skills: [],
+        capabilities: [],
+        dispatchEnabled: false,
+        source: 'swarm.yaml',
+        sourceDerived: true,
+        writable: false,
+        disabledActions: ['Registry is read-only in Phase 1.'],
+      },
+      {
+        id: 'swarm99',
+        displayName: 'Registry Only Worker',
+        role: 'Registry Only',
+        skills: [],
+        capabilities: [],
+        dispatchEnabled: false,
+        source: 'swarm.yaml',
+        sourceDerived: true,
+        writable: false,
+        disabledActions: ['Registry is read-only in Phase 1.'],
+      },
+    ])
+
+    expect(mergeRegistryRosterWithCrew(crew, roster, [])).toEqual([
+      expect.objectContaining({ id: 'swarm1', displayName: 'Registry Live Worker' }),
+    ])
+  })
+
+  it('does not consume registry entries when the read-only API reports ok=false', () => {
+    expect(agentRegistryResponseEntries({
+      ok: false,
+      registry: {
+        entries: [{
+          id: 'swarm9',
+          displayName: 'Rejected',
+          role: 'Ops',
+          skills: [],
+          capabilities: [],
+          dispatchEnabled: false,
+          source: 'swarm.yaml',
+          sourceDerived: true,
+          writable: false,
+          disabledActions: [],
+        }],
+      },
+    })).toEqual([])
+  })
+
+  it('does not retain the old mutating Add Swarm roster flow in the Phase 1 read-only surface', () => {
+    const source = readFileSync('src/screens/swarm2/swarm2-screen.tsx', 'utf8')
+    expect(source).not.toContain("fetch('/api/swarm-roster'")
+    expect(source).not.toContain('rosterQuery')
+    expect(source).not.toContain('Add Swarm')
   })
 
   it('documents Operations card primitives reused for Swarm2 worker nodes', () => {
