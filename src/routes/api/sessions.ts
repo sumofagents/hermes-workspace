@@ -19,7 +19,35 @@ import {
   getLocalSession,
   listLocalSessions,
   updateLocalSessionTitle,
+  type LocalSession,
 } from '../../server/local-session-store'
+
+function toLocalSessionSummary(ls: LocalSession): Record<string, unknown> {
+  return {
+    key: ls.id,
+    id: ls.id,
+    friendlyId: ls.id,
+    title: ls.title || 'Local Chat',
+    label: ls.title || 'Local Chat',
+    derivedTitle: ls.title || 'Local Chat',
+    startedAt: ls.createdAt,
+    updatedAt: ls.updatedAt,
+    message_count: ls.messageCount,
+    model: ls.model,
+    source: 'local',
+  }
+}
+
+export function buildUnavailableSessionsPayload(
+  localSessions: Array<LocalSession>,
+): Record<string, unknown> {
+  return {
+    ok: true,
+    sessions: localSessions.map(toLocalSessionSummary),
+    source: localSessions.length > 0 ? 'local' : 'unavailable',
+    message: SESSIONS_API_UNAVAILABLE_MESSAGE,
+  }
+}
 
 export const Route = createFileRoute('/api/sessions')({
   server: {
@@ -31,12 +59,7 @@ export const Route = createFileRoute('/api/sessions')({
         }
         const capabilities = await ensureGatewayProbed()
         if (!capabilities.sessions) {
-          return json({
-            ok: true,
-            sessions: [],
-            source: 'unavailable',
-            message: SESSIONS_API_UNAVAILABLE_MESSAGE,
-          })
+          return json(buildUnavailableSessionsPayload(listLocalSessions()))
         }
 
         try {

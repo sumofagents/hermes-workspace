@@ -10,7 +10,35 @@ import {
 } from '../../server/claude-api'
 import { resolveSessionKey } from '../../server/session-utils'
 import { isAuthenticated } from '@/server/auth-middleware'
-import { getLocalSession, getLocalMessages } from '../../server/local-session-store'
+import {
+  getLocalMessages,
+  getLocalSession,
+  type LocalMessage,
+} from '../../server/local-session-store'
+
+export function buildLocalHistoryPayload(
+  sessionKey: string,
+  localMessages: Array<LocalMessage>,
+): Record<string, unknown> {
+  return {
+    sessionKey,
+    sessionId: sessionKey,
+    messages: localMessages.map((m, index) => ({
+      id: m.id,
+      role: m.role,
+      content: [{ type: 'text', text: m.content }],
+      timestamp: m.timestamp,
+      historyIndex: index,
+    })),
+    source: 'local',
+  }
+}
+
+function getLocalHistoryPayload(sessionKey: string): Record<string, unknown> | null {
+  const localSession = getLocalSession(sessionKey)
+  if (!localSession) return null
+  return buildLocalHistoryPayload(sessionKey, getLocalMessages(sessionKey))
+}
 
 export const Route = createFileRoute('/api/history')({
   server: {
@@ -20,7 +48,14 @@ export const Route = createFileRoute('/api/history')({
           return json({ ok: false, error: 'Unauthorized' }, { status: 401 })
         }
         await ensureGatewayProbed()
+        const url = new URL(request.url)
+        const limit = Number(url.searchParams.get('limit') || '200')
+        const rawSessionKey = url.searchParams.get('sessionKey')?.trim()
+        const friendlyId = url.searchParams.get('friendlyId')?.trim()
         if (!getGatewayCapabilities().sessions) {
+          const requestedKey = rawSessionKey || friendlyId
+          const localPayload = requestedKey ? getLocalHistoryPayload(requestedKey) : null
+          if (localPayload) return json(localPayload)
           return json({
             sessionKey: 'new',
             sessionId: 'new',
@@ -30,10 +65,6 @@ export const Route = createFileRoute('/api/history')({
           })
         }
         try {
-          const url = new URL(request.url)
-          const limit = Number(url.searchParams.get('limit') || '200')
-          const rawSessionKey = url.searchParams.get('sessionKey')?.trim()
-          const friendlyId = url.searchParams.get('friendlyId')?.trim()
           let { sessionKey } = await resolveSessionKey({
             rawSessionKey,
             friendlyId,
@@ -98,24 +129,9 @@ export const Route = createFileRoute('/api/history')({
             messages = []
           }
 
-          // Fallback to local session store for portable/local model sessions
-          if (messages.length === 0) {
-            const localSession = getLocalSession(sessionKey)
-            if (localSession) {
-              const localMessages = getLocalMessages(sessionKey)
-              return json({
-                sessionKey,
-                sessionId: sessionKey,
-                messages: localMessages.map((m, index) => ({
-                  id: m.id,
-                  role: m.role,
-                  content: [{ type: 'text', text: m.content }],
-                  timestamp: m.timestamp,
-                  historyIndex: index,
-                })),
-              })
-            }
-          }
+          // Fallback to local session store for portable/local model sessions.
+          const localPayload = messages.length === 0 ? getLocalHistoryPayload(sessionKey) : null
+          if (localPayload) return json(localPayload)
 
           const boundedMessages = limit > 0 ? messages.slice(-limit) : messages
 

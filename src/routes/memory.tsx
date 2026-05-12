@@ -16,10 +16,17 @@ const KnowledgeBrowserScreen = lazy(async () => {
   return { default: module.KnowledgeBrowserScreen }
 })
 
+const VectorMemoryScreen = lazy(async () => {
+  const module = await import('@/screens/memory/vector-memory-screen')
+  return { default: module.VectorMemoryScreen }
+})
+
+type MemoryTab = 'profile' | 'knowledge' | 'vectors'
+
 export const Route = createFileRoute('/memory')({
   ssr: false,
   component: function MemoryRoute() {
-    const [tab, setTab] = useState<'memory' | 'knowledge'>('memory')
+    const [tab, setTab] = useState<MemoryTab>('profile')
     const memoryAvailable = useFeatureAvailable('memory')
 
     usePageTitle('Memory')
@@ -28,7 +35,7 @@ export const Route = createFileRoute('/memory')({
       <div className="flex h-full min-h-0 flex-col">
         <Tabs
           value={tab}
-          onValueChange={(value) => setTab(value as 'memory' | 'knowledge')}
+          onValueChange={(value) => setTab(value as MemoryTab)}
           className="h-full min-h-0 gap-0"
         >
           <div className="border-b border-primary-200 px-3 pt-3 dark:border-neutral-800 md:px-4 md:pt-4">
@@ -36,13 +43,14 @@ export const Route = createFileRoute('/memory')({
               variant="underline"
               className="w-full justify-start gap-1"
             >
-              <TabsTab value="memory">Memory</TabsTab>
+              <TabsTab value="profile">Profile</TabsTab>
               <TabsTab value="knowledge">Knowledge</TabsTab>
+              <TabsTab value="vectors">Vectors</TabsTab>
             </TabsList>
           </div>
 
-          <TabsPanel value="memory" className="min-h-0 flex-1">
-            {tab === 'memory' ? (
+          <TabsPanel value="profile" className="min-h-0 flex-1">
+            {tab === 'profile' ? (
               <Suspense
                 fallback={
                   <RouteLoadingState label="Loading memory browser..." />
@@ -68,6 +76,18 @@ export const Route = createFileRoute('/memory')({
                 }
               >
                 <KnowledgeBrowserScreen />
+              </Suspense>
+            ) : null}
+          </TabsPanel>
+
+          <TabsPanel value="vectors" className="min-h-0 flex-1">
+            {tab === 'vectors' ? (
+              <Suspense
+                fallback={
+                  <RouteLoadingState label="Loading vector memory..." />
+                }
+              >
+                <VectorMemoryScreen />
               </Suspense>
             ) : null}
           </TabsPanel>
