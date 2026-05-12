@@ -152,6 +152,8 @@ type RuntimeEntry = {
   phase?: string | null
   lastSummary?: string | null
   lastResult?: string | null
+  lastRealSummary?: string | null
+  lastRealResult?: string | null
   blockedReason?: string | null
   checkpointStatus?: string | null
   needsHuman?: boolean | null
@@ -389,7 +391,35 @@ export function mergeRegistryRosterWithCrew(
   roomIds: Array<string>,
   runtimeByWorker: Map<string, RuntimeEntry> = new Map(),
 ): Array<CrewMember> {
-  return sortSwarmMembers(crew, roomIds).map((member) => {
+  const crewIds = new Set(crew.map((member) => member.id))
+  const registryOnlyMembers: Array<CrewMember> = registryRoster
+    .filter((worker) => worker.id && !crewIds.has(worker.id))
+    .map((worker) => ({
+      id: worker.id,
+      displayName: worker.name,
+      role: worker.role,
+      specialty: worker.specialty,
+      mission: worker.mission,
+      skills: worker.skills ?? [],
+      capabilities: worker.capabilities ?? [],
+      profileFound: true,
+      gatewayState: 'offline',
+      processAlive: false,
+      platforms: {},
+      model: worker.model || 'unknown',
+      provider: 'registry',
+      lastSessionTitle: null,
+      lastSessionAt: null,
+      sessionCount: 0,
+      messageCount: 0,
+      toolCallCount: 0,
+      totalTokens: 0,
+      estimatedCostUsd: null,
+      cronJobCount: 0,
+      assignedTaskCount: 0,
+    }))
+
+  return sortSwarmMembers([...crew, ...registryOnlyMembers], roomIds).map((member) => {
     const runtime = runtimeByWorker.get(member.id)
     const roster = registryRoster.find((worker) => worker.id === member.id)
     return {
@@ -398,8 +428,8 @@ export function mergeRegistryRosterWithCrew(
       role: roster?.role || runtime?.role || member.role,
       specialty: roster?.specialty,
       mission: roster?.mission,
-      skills: roster?.skills ?? [],
-      capabilities: roster?.capabilities ?? [],
+      skills: roster?.skills ?? member.skills ?? [],
+      capabilities: roster?.capabilities ?? member.capabilities ?? [],
       model: roster?.model || member.model,
     }
   })
@@ -571,7 +601,6 @@ function displayTaskTitle(runtime: RuntimeEntry | undefined, fallback: string): 
   const realResult = runtime?.lastRealResult ?? null
   return cleanSwarmLabel(runtime?.blockedReason || runtime?.currentTask || realSummary || runtime?.lastSummary || realResult || runtime?.lastResult || fallback || '', 'Ready for task', 64)
 }
-
 
 function formatAssignedModel(model?: string | null, provider?: string | null): string {
   const value = `${model || ''} ${provider || ''}`.toLowerCase()
@@ -982,28 +1011,21 @@ export function Swarm2Screen() {
           try { parsed = JSON.parse(text) } catch {}
           const msg = parsed.error || text || `HTTP ${res.status}`
           if (msg.includes('tmux not installed')) {
-            toast({
-              title: 'tmux not installed',
-              description:
-                `Swarm worker ${workerId} couldn't start because tmux is not installed on this host. Install tmux (‘brew install tmux’ or ‘apt install tmux’) and try again. See #244.`,
-              variant: 'destructive',
-            })
+            toast(
+              `tmux not installed: Swarm worker ${workerId} couldn't start because tmux is not installed on this host. Install tmux (‘brew install tmux’ or ‘apt install tmux’) and try again. See #244.`,
+              { type: 'error' },
+            )
           } else {
-            toast({
-              title: `Failed to start ${workerId}`,
-              description: msg,
-              variant: 'destructive',
-            })
+            toast(`Failed to start ${workerId}: ${msg}`, { type: 'error' })
           }
           // eslint-disable-next-line no-console
           console.error('[swarm2] start session failed:', res.status, text)
         }
       } catch (err) {
-        toast({
-          title: `Failed to start ${workerId}`,
-          description: err instanceof Error ? err.message : String(err),
-          variant: 'destructive',
-        })
+        toast(
+          `Failed to start ${workerId}: ${err instanceof Error ? err.message : String(err)}`,
+          { type: 'error' },
+        )
       } finally {
         setPendingTmux((prev) => {
           const next = new Set(prev)

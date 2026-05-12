@@ -101,66 +101,10 @@ describe('vector-memory server helpers', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('stores dashboard team discoveries with explicit embeddings and Chroma upsert', async () => {
-    existsSync.mockReturnValue(true)
-    readFileSync.mockReturnValue(
-      JSON.stringify({
-        chromadb_host: '127.0.0.1',
-        chromadb_port: 8000,
-        embedding_service_url: 'http://forge.local:8006',
-        embedding_model: 'Qwen/Qwen3-Embedding-0.6B',
-        collections: { team_knowledge: 'team_knowledge' },
-      }),
-    )
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ heartbeat: 1 }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ok: true }) })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([{ id: 'team-col-id', name: 'team_knowledge' }]),
-      })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(7) })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ embedding: [0.3, 0.4], dimensions: 1024 }),
-      })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
-    vi.stubGlobal('fetch', fetchMock)
-
+  it('does not expose dashboard write helpers in the read-only vector-memory module', async () => {
     const mod = await loadMod()
-    const payload = await mod.storeTeamDiscovery({
-      content: '  Dashboard memory control should remain safe and explicit.  ',
-      source: 'test-suite',
-    })
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      5,
-      'http://forge.local:8006/embed-single',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ text: 'Dashboard memory control should remain safe and explicit.' }),
-      }),
-    )
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      6,
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/team-col-id/upsert',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"embeddings":[[0.3,0.4]]'),
-      }),
-    )
-    const upsertBody = JSON.parse(fetchMock.mock.calls[5][1].body)
-    expect(upsertBody.documents).toEqual([
-      'Dashboard memory control should remain safe and explicit.',
-    ])
-    expect(upsertBody.metadatas[0]).toMatchObject({
-      kind: 'team_discovery',
-      source: 'test-suite',
-      created_by: 'workspace-vector-memory',
-    })
-    expect(payload.stored.id).toMatch(/^dashboard-discovery-/)
-    expect(payload.stored.collection).toBe('team_knowledge')
+    expect('storeTeamDiscovery' in mod).toBe(false)
   })
 
   it('queries Forge with the live embed-single contract before Chroma query', async () => {

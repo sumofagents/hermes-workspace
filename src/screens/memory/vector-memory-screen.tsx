@@ -52,8 +52,6 @@ type SearchPayload = {
   status: VectorMemoryStatus
 }
 
-type StoredDiscovery = Omit<VectorSearchResult, 'distance' | 'score'>
-
 async function readJson<T>(url: string): Promise<T> {
   const response = await fetch(url)
   const payload = await response.json().catch(() => ({}))
@@ -114,7 +112,6 @@ export function VectorMemoryScreen() {
   const [query, setQuery] = useState('')
   const [collection, setCollection] = useState('all')
   const [selected, setSelected] = useState<VectorSearchResult | null>(null)
-  const [discoveryContent, setDiscoveryContent] = useState('')
 
   const statusQuery = useQuery({
     queryKey: ['vector-memory', 'status'],
@@ -133,32 +130,6 @@ export function VectorMemoryScreen() {
     },
     onError: (error) => {
       toast(error instanceof Error ? error.message : 'Vector search failed', {
-        type: 'warning',
-      })
-    },
-  })
-
-  const storeDiscoveryMutation = useMutation({
-    mutationFn: () =>
-      postJson<{ stored: StoredDiscovery; status: VectorMemoryStatus }>(
-        '/api/vector-memory/discovery',
-        {
-          content: discoveryContent,
-          source: 'workspace-dashboard',
-        },
-      ),
-    onSuccess: (payload) => {
-      setDiscoveryContent('')
-      statusQuery.refetch()
-      setSelected({
-        ...payload.stored,
-        distance: null,
-        score: null,
-      })
-      toast('Stored team discovery in vector memory', { type: 'success' })
-    },
-    onError: (error) => {
-      toast(error instanceof Error ? error.message : 'Failed to store discovery', {
         type: 'warning',
       })
     },
@@ -333,30 +304,10 @@ export function VectorMemoryScreen() {
 
           <div className="rounded-2xl border border-primary-200 bg-primary-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
             <div className="text-xs font-semibold uppercase tracking-wide text-primary-500 dark:text-neutral-400">
-              Safe Control
+              Read-only phase
             </div>
             <div className="mt-1 text-xs text-primary-500 dark:text-neutral-400">
-              Store a curated team discovery in team_knowledge. Destructive controls stay disabled.
-            </div>
-            <textarea
-              value={discoveryContent}
-              onChange={(event) => setDiscoveryContent(event.target.value)}
-              maxLength={4000}
-              placeholder="Durable discovery or operational fact to embed..."
-              className="mt-3 min-h-24 w-full resize-y rounded-xl border border-primary-200 bg-primary-100/60 p-2 text-xs outline-none focus:border-accent-500 dark:border-neutral-800 dark:bg-neutral-900/60"
-            />
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-primary-400 dark:text-neutral-500">
-                {discoveryContent.length}/4000
-              </span>
-              <button
-                type="button"
-                onClick={() => storeDiscoveryMutation.mutate()}
-                disabled={!discoveryContent.trim() || storeDiscoveryMutation.isPending}
-                className="rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {storeDiscoveryMutation.isPending ? 'Storing...' : 'Store discovery'}
-              </button>
+              This dashboard can inspect Chroma status and run semantic searches. Vector writes, promotion, and authority decisions stay disabled here; source repositories and GitHub artifacts remain the evidence authority.
             </div>
           </div>
         </section>

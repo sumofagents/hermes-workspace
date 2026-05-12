@@ -99,7 +99,7 @@ describe('Swarm2 surface contract', () => {
     ])
   })
 
-  it('does not add registry-only entries to the operational worker control surface', () => {
+  it('keeps registry-only entries visible as offline operational worker cards', () => {
     const crew = [{
       id: 'swarm1',
       displayName: 'Live Worker',
@@ -137,8 +137,8 @@ describe('Swarm2 surface contract', () => {
         id: 'swarm99',
         displayName: 'Registry Only Worker',
         role: 'Registry Only',
-        skills: [],
-        capabilities: [],
+        skills: ['review'],
+        capabilities: ['code-review'],
         dispatchEnabled: false,
         source: 'swarm.yaml',
         sourceDerived: true,
@@ -149,6 +149,15 @@ describe('Swarm2 surface contract', () => {
 
     expect(mergeRegistryRosterWithCrew(crew, roster, [])).toEqual([
       expect.objectContaining({ id: 'swarm1', displayName: 'Registry Live Worker' }),
+      expect.objectContaining({
+        id: 'swarm99',
+        displayName: 'Registry Only Worker',
+        role: 'Registry Only',
+        gatewayState: 'offline',
+        processAlive: false,
+        skills: ['review'],
+        capabilities: ['code-review'],
+      }),
     ])
   })
 

@@ -1,4 +1,3 @@
-import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -51,13 +50,6 @@ export class VectorMemoryInputError extends Error {
     super(message)
     this.name = 'VectorMemoryInputError'
   }
-}
-
-export type StoreTeamDiscoveryResult = {
-  id: string
-  collection: string
-  document: string
-  metadata: Record<string, unknown>
 }
 
 type ChromaCollection = {
@@ -405,78 +397,4 @@ export async function searchVectorMemory(options: {
   const results = batches.flatMap((batch) => (batch.status === 'fulfilled' ? batch.value : []))
   results.sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
   return { results: results.slice(0, limit), status }
-}
-
-function teamKnowledgeCollection(status: VectorMemoryStatus): VectorCollectionStat {
-  const configuredName = status.config.collections.team_knowledge || 'team_knowledge'
-  const collection = status.collections.find(
-    (item) => item.key === 'team_knowledge' || item.name === configuredName,
-  )
-  if (collection) return collection
-  return { key: 'team_knowledge', name: configuredName, id: configuredName, count: null }
-}
-
-async function upsertDocument(
-  config: VectorMemoryConfig,
-  collection: VectorCollectionStat,
-  document: string,
-  embedding: Array<number>,
-  metadata: Record<string, unknown>,
-  id: string,
-): Promise<void> {
-  const idOrName = collection.id || collection.name
-  const body = JSON.stringify({
-    ids: [id],
-    embeddings: [embedding],
-    documents: [document],
-    metadatas: [metadata],
-  })
-  try {
-    await fetchJson<unknown>(
-      `${v2CollectionsUrl(config)}/${encodeURIComponent(idOrName)}/upsert`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
-    )
-  } catch {
-    await fetchJson<unknown>(
-      `${legacyCollectionsUrl(config)}/${encodeURIComponent(idOrName)}/upsert`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
-    )
-  }
-}
-
-export async function storeTeamDiscovery(options: {
-  content: string
-  source?: string
-}): Promise<{ stored: StoreTeamDiscoveryResult; status: VectorMemoryStatus }> {
-  const document = options.content.trim()
-  if (!document) throw new VectorMemoryInputError('Discovery content is required')
-  if (document.length > 4000) {
-    throw new VectorMemoryInputError('Discovery content must be 4000 characters or fewer')
-  }
-
-  const status = await getVectorMemoryStatus()
-  if (!status.chroma.ok) throw new Error(status.chroma.error || 'ChromaDB is unavailable')
-  if (!status.embeddings.ok) throw new Error(status.embeddings.error || 'Embedding service is unavailable')
-
-  const collection = teamKnowledgeCollection(status)
-  const embedding = await embedQuery(status.config, document)
-  const createdAt = new Date().toISOString()
-  const id = `dashboard-discovery-${crypto.randomUUID()}`
-  const metadata: Record<string, unknown> = {
-    kind: 'team_discovery',
-    source: options.source?.trim() || 'workspace-dashboard',
-    created_at: createdAt,
-    created_by: 'workspace-vector-memory',
-  }
-
-  await upsertDocument(status.config, collection, document, embedding, metadata, id)
-  return {
-    stored: {
-      id,
-      collection: collection.name,
-      document,
-      metadata,
-    },
-    status,
-  }
 }
